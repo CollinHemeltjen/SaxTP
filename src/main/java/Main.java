@@ -7,15 +7,19 @@ public class Main {
         new Main().run();
     }
 
-    private void run(){
-        try {
-            InetSocketAddress address = new InetSocketAddress("vanviegen.net", 29588);
+    private DatagramSocket socketToServer;
 
-            DatagramSocket datagramSocket = new DatagramSocket();
-            datagramSocket.connect(address);
-            datagramSocket.close();
-        } catch (SocketException e) {
-            e.printStackTrace();
+    private void run() {
+        try {
+            createConnection("vanviegen.net", 29588);
+        } catch (SocketException se) {
+            System.err.println(se.getMessage());
         }
+    }
+
+    private void createConnection(String hostname, int port) throws SocketException {
+        InetSocketAddress address = new InetSocketAddress(hostname, port);
+        socketToServer = new DatagramSocket();
+        socketToServer.connect(address);
     }
 }
