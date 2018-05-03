@@ -41,6 +41,13 @@ public class Main {
     }
 
 
+    /**
+     * Creates a byte array with the following setup
+     * ‘SaxTP’ uint8​(0) uint32​(transferId) byte[...]​(filename)
+     *
+     * @param filename the filename to request from the server
+     * @return the byte array
+     */
     byte[] createRequestMessage(String filename) {
         byte[] protocolMarker = "SaxTP".getBytes();
         byte[] packetType = new byte[]{0};
@@ -59,6 +66,12 @@ public class Main {
         return buf;
     }
 
+    /**
+     * Creates a connection to the server
+     * @param connectionData a connectionData object containing the data for the connection
+     * @return the DatagramSocket containing the connection to the server
+     * @throws SocketException when the connecting goes wrong
+     */
     private DatagramSocket createConnection(ConnectionData connectionData) throws SocketException {
         System.out.println("Creating connection with " + connectionData.getHostname());
         InetSocketAddress address = new InetSocketAddress(connectionData.getHostname(), ConnectionData.PORT);
