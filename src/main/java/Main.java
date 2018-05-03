@@ -1,6 +1,6 @@
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketException;
+
+import java.io.IOException;
+import java.net.*;
 import java.util.Scanner;
 
 public class Main {
@@ -8,23 +8,50 @@ public class Main {
         new Main().run(args);
     }
 
-    private DatagramSocket socketToServer;
-
     private void run(String[] args) {
         ConnectionData connectionData = createConnectionData(args);
 
-        try {
-            createConnection(connectionData.getHostname(), ConnectionData.PORT);
-            System.out.println(socketToServer);
+        try (DatagramSocket serverSocket = createConnection(connectionData)) {
+            sendMessage(serverSocket);
+            System.out.println(receiveMessage(serverSocket));
+
         } catch (SocketException se) {
             System.out.println("could not connect to server, please try again!");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    private void createConnection(String hostname, int port) throws SocketException {
-        InetSocketAddress address = new InetSocketAddress(hostname, port);
-        socketToServer = new DatagramSocket();
-        socketToServer.connect(address);
+    private void sendMessage(DatagramSocket socket) throws IOException {
+        System.out.println("Sending request to server");
+        byte[] start = "SaxTP".getBytes();
+        byte[] mid = new byte[]{0, (byte) 218, 109, 1, 82};
+        byte[] end = "1.zip".getBytes();
+        byte[] buf = new byte[start.length + mid.length + end.length];
+
+        System.arraycopy(start, 0, buf, 0, start.length);
+        System.arraycopy(mid, 0, buf, start.length, mid.length);
+        System.arraycopy(end, 0, buf, mid.length+start.length, end.length);
+
+        DatagramPacket packet = new DatagramPacket(buf, buf.length);
+        socket.send(packet);
+    }
+
+    private String receiveMessage(DatagramSocket socket) throws IOException {
+        System.out.println("Waiting for server response");
+        byte[] buf = new byte[500];
+        DatagramPacket packet = new DatagramPacket(buf, buf.length);
+        socket.receive(packet);
+        System.out.println("Formatting response");
+        return new String(packet.getData(), 0, packet.getLength());
+    }
+
+    private DatagramSocket createConnection(ConnectionData connectionData) throws SocketException {
+        System.out.println("Creating connection with " + connectionData.getHostname());
+        InetSocketAddress address = new InetSocketAddress(connectionData.getHostname(), ConnectionData.PORT);
+        DatagramSocket socketServer = new DatagramSocket();
+        socketServer.connect(address);
+        return socketServer;
     }
 
     /**
