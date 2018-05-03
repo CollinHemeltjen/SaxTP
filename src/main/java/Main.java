@@ -1,6 +1,7 @@
 
 import java.io.IOException;
 import java.net.*;
+import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
@@ -12,7 +13,7 @@ public class Main {
         ConnectionData connectionData = createConnectionData(args);
 
         try (DatagramSocket serverSocket = createConnection(connectionData)) {
-            sendMessage(serverSocket);
+            sendMessage(serverSocket, connectionData);
             System.out.println(receiveMessage(serverSocket));
 
         } catch (SocketException se) {
@@ -22,17 +23,10 @@ public class Main {
         }
     }
 
-    private void sendMessage(DatagramSocket socket) throws IOException {
+    private void sendMessage(DatagramSocket socket, ConnectionData connectionData) throws IOException {
         System.out.println("Sending request to server");
-        byte[] start = "SaxTP".getBytes();
-        byte[] mid = new byte[]{0, (byte) 218, 109, 1, 82};
-        byte[] end = "1.zip".getBytes();
-        byte[] buf = new byte[start.length + mid.length + end.length];
 
-        System.arraycopy(start, 0, buf, 0, start.length);
-        System.arraycopy(mid, 0, buf, start.length, mid.length);
-        System.arraycopy(end, 0, buf, mid.length+start.length, end.length);
-
+        byte[] buf = createRequestMessage(connectionData.getFilename());
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.send(packet);
     }
@@ -44,6 +38,24 @@ public class Main {
         socket.receive(packet);
         System.out.println("Formatting response");
         return new String(packet.getData(), 0, packet.getLength());
+    }
+
+    private byte[] createRequestMessage(String filename) {
+        byte[] protocolMarker = "SaxTP".getBytes();
+        byte[] packetType = new byte[]{0};
+
+        byte[] transferIdentifier = new byte[4];
+        new Random().nextBytes(transferIdentifier);
+
+        byte[] file = filename.getBytes();
+        byte[] buf = new byte[protocolMarker.length + packetType.length + transferIdentifier.length + file.length];
+
+        System.arraycopy(protocolMarker, 0, buf, 0, protocolMarker.length);
+        System.arraycopy(packetType, 0, buf, protocolMarker.length, packetType.length);
+        System.arraycopy(transferIdentifier, 0, buf, protocolMarker.length + packetType.length, transferIdentifier.length);
+        System.arraycopy(file, 0, buf, transferIdentifier.length + packetType.length + protocolMarker.length, file.length);
+
+        return buf;
     }
 
     private DatagramSocket createConnection(ConnectionData connectionData) throws SocketException {
