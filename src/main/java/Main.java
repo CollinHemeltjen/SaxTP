@@ -40,7 +40,8 @@ public class Main {
         return new String(packet.getData(), 0, packet.getLength());
     }
 
-    private byte[] createRequestMessage(String filename) {
+
+    byte[] createRequestMessage(String filename) {
         byte[] protocolMarker = "SaxTP".getBytes();
         byte[] packetType = new byte[]{0};
 
