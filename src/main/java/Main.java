@@ -1,10 +1,12 @@
 
 import Objects.ConnectionData;
 import Objects.SaxTPRequest;
+import Objects.SaxTPResponseAck;
 import Objects.SaxTPResponseData;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Scanner;
@@ -32,28 +34,36 @@ public class Main {
         System.out.println("Sending request to server");
 
         byte[] buf = new SaxTPRequest(connectionData.getFilename()).getBytes();
-        System.out.println(Arrays.toString(buf));
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.send(packet);
     }
 
     private void retriveFile(DatagramSocket socket) throws IOException {
         System.out.println("Retrieving file from server");
-        byte[] respones = receiveMessage(socket);
-        SaxTPResponseData saxTPResponseData = new SaxTPResponseData(respones);
-        System.out.println(Arrays.toString(respones));
-        System.out.println(respones.length);
+        ArrayList<SaxTPResponseData> responses = new ArrayList<>();
+        DatagramPacket responsePacket;
+        do{
+            responsePacket = receiveMessage(socket);
+            byte[] response = responsePacket.getData();
+            SaxTPResponseData responseData = new SaxTPResponseData(response);
+
+            responses.add(responseData);
+            sendReponseAck(socket, responseData.getTransferId(), responseData.getSequenceId());
+
+        }while (responsePacket.getLength() == 500);
     }
 
-    private byte[] receiveMessage(DatagramSocket socket) throws IOException {
+    private DatagramPacket receiveMessage(DatagramSocket socket) throws IOException {
         byte[] buf = new byte[500];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.receive(packet);
-        return packet.getData();
+        return packet;
     }
 
-    private void decodeByteMessage(byte[] bytes){
-
+    private void sendReponseAck(DatagramSocket socket, byte[] transferId, byte[] sequenceId) throws IOException {
+        byte[] buf = new SaxTPResponseAck(transferId, sequenceId).getBytes();
+        DatagramPacket packet = new DatagramPacket(buf, buf.length);
+        socket.send(packet);
     }
 
     /**
