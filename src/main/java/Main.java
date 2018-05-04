@@ -4,12 +4,16 @@ import Objects.SaxTPRequest;
 import Objects.SaxTPResponseAck;
 import Objects.SaxTPResponseData;
 
+import java.io.ByteArrayInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class Main {
     public static void main(String[] args) {
@@ -21,7 +25,7 @@ public class Main {
 
         try (DatagramSocket serverSocket = createConnection(connectionData)) {
             sendRequest(serverSocket, connectionData);
-            retriveFile(serverSocket);
+            retriveFile(serverSocket, connectionData.getFilename());
 
         } catch (SocketException se) {
             System.out.println("could not connect to server, please try again!");
@@ -38,26 +42,28 @@ public class Main {
         socket.send(packet);
     }
 
-    private void retriveFile(DatagramSocket socket) throws IOException {
+    private void retriveFile(DatagramSocket socket, String filename) throws IOException {
         System.out.println("Retrieving file from server");
         ArrayList<SaxTPResponseData> responses = new ArrayList<>();
-        DatagramPacket responsePacket;
+        byte[] response;
         do{
-            responsePacket = receiveMessage(socket);
-            byte[] response = responsePacket.getData();
+            response = receiveMessage(socket);
             SaxTPResponseData responseData = new SaxTPResponseData(response);
-
+            System.out.println(Arrays.toString(response));
             responses.add(responseData);
             sendReponseAck(socket, responseData.getTransferId(), responseData.getSequenceId());
 
-        }while (responsePacket.getLength() == 500);
+        }while (response.length == 500);
+        buildFile(responses, filename);
     }
 
-    private DatagramPacket receiveMessage(DatagramSocket socket) throws IOException {
+    private byte[] receiveMessage(DatagramSocket socket) throws IOException {
         byte[] buf = new byte[500];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.receive(packet);
-        return packet;
+        byte[] response = new byte[packet.getLength()];
+        System.arraycopy(packet.getData(), 0, response, 0, response.length);
+        return response;
     }
 
     private void sendReponseAck(DatagramSocket socket, byte[] transferId, byte[] sequenceId) throws IOException {
@@ -66,6 +72,25 @@ public class Main {
         socket.send(packet);
     }
 
+    private void buildFile(ArrayList<SaxTPResponseData> responses, String filename) throws IOException {
+        int length = 0;
+        for(SaxTPResponseData data: responses){
+            length += data.getData().length;
+        }
+
+        byte[] bytes = new byte[length];
+        int position = 0;
+        for(SaxTPResponseData data: responses){
+            byte[] dataBytes = data.getData();
+            int dataLength = dataBytes.length;
+            System.arraycopy(dataBytes, 0, bytes,position, dataLength);
+            position += dataLength;
+        }
+
+        try(FileOutputStream fos = new FileOutputStream(filename)){
+            fos.write(bytes);
+        }
+    }
     /**
      * Creates a byte array with the following setup
      * ‘SaxTP’ uint8​(0) uint32​(transferId) byte[...]​(filename)
