@@ -1,5 +1,7 @@
 
 import Objects.ConnectionData;
+import Objects.SaxTPRequest;
+import Objects.SaxTPResponseData;
 
 import java.io.IOException;
 import java.net.*;
@@ -29,7 +31,8 @@ public class Main {
     private void sendRequest(DatagramSocket socket, ConnectionData connectionData) throws IOException {
         System.out.println("Sending request to server");
 
-        byte[] buf = createRequestMessage(connectionData.getFilename());
+        byte[] buf = new SaxTPRequest(connectionData.getFilename()).getBytes();
+        System.out.println(Arrays.toString(buf));
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.send(packet);
     }
@@ -37,6 +40,7 @@ public class Main {
     private void retriveFile(DatagramSocket socket) throws IOException {
         System.out.println("Retrieving file from server");
         byte[] respones = receiveMessage(socket);
+        SaxTPResponseData saxTPResponseData = new SaxTPResponseData(respones);
         System.out.println(Arrays.toString(respones));
         System.out.println(respones.length);
     }
