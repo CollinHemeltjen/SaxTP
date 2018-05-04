@@ -1,3 +1,5 @@
+package Objects;
+
 public class ConnectionData {
     public static final int PORT = 29588;
     private String hostname;

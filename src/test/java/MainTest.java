@@ -1,11 +1,9 @@
-import org.junit.Before;
+import Objects.ConnectionData;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Arrays;
 
 public class MainTest {
     @Test

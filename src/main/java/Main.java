@@ -1,6 +1,9 @@
 
+import Objects.ConnectionData;
+
 import java.io.IOException;
 import java.net.*;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -13,8 +16,8 @@ public class Main {
         ConnectionData connectionData = createConnectionData(args);
 
         try (DatagramSocket serverSocket = createConnection(connectionData)) {
-            sendMessage(serverSocket, connectionData);
-            System.out.println(receiveMessage(serverSocket));
+            sendRequest(serverSocket, connectionData);
+            retriveFile(serverSocket);
 
         } catch (SocketException se) {
             System.out.println("could not connect to server, please try again!");
@@ -23,7 +26,7 @@ public class Main {
         }
     }
 
-    private void sendMessage(DatagramSocket socket, ConnectionData connectionData) throws IOException {
+    private void sendRequest(DatagramSocket socket, ConnectionData connectionData) throws IOException {
         System.out.println("Sending request to server");
 
         byte[] buf = createRequestMessage(connectionData.getFilename());
@@ -31,15 +34,23 @@ public class Main {
         socket.send(packet);
     }
 
-    private String receiveMessage(DatagramSocket socket) throws IOException {
-        System.out.println("Waiting for server response");
+    private void retriveFile(DatagramSocket socket) throws IOException {
+        System.out.println("Retrieving file from server");
+        byte[] respones = receiveMessage(socket);
+        System.out.println(Arrays.toString(respones));
+        System.out.println(respones.length);
+    }
+
+    private byte[] receiveMessage(DatagramSocket socket) throws IOException {
         byte[] buf = new byte[500];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.receive(packet);
-        System.out.println("Formatting response");
-        return new String(packet.getData(), 0, packet.getLength());
+        return packet.getData();
     }
 
+    private void decodeByteMessage(byte[] bytes){
+
+    }
 
     /**
      * Creates a byte array with the following setup
@@ -48,6 +59,7 @@ public class Main {
      * @param filename the filename to request from the server
      * @return the byte array
      */
+    @Deprecated
     byte[] createRequestMessage(String filename) {
         byte[] protocolMarker = "SaxTP".getBytes();
         byte[] packetType = new byte[]{0};
