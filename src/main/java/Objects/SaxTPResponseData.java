@@ -35,4 +35,12 @@ public class SaxTPResponseData extends SaxTPMessage {
         System.arraycopy(data, 0, buf, message.length + sequenceId.length, data.length);
         return buf;
     }
+
+    public byte[] getData() {
+        return data;
+    }
+
+    public byte[] getSequenceId() {
+        return sequenceId;
+    }
 }

@@ -25,4 +25,16 @@ public abstract class SaxTPMessage {
         System.arraycopy(transferId, 0, buf, protocolMarker.length + packetType.length, transferId.length);
         return buf;
     }
+
+    public static byte[] getProtocolMarker() {
+        return protocolMarker;
+    }
+
+    public byte[] getPacketType() {
+        return packetType;
+    }
+
+    public byte[] getTransferId() {
+        return transferId;
+    }
 }
