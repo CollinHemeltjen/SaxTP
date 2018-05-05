@@ -1,16 +1,14 @@
-
 import Objects.ConnectionData;
 import Objects.SaxTPRequest;
 import Objects.SaxTPResponseAck;
 import Objects.SaxTPResponseData;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.*;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Random;
-import java.util.Scanner;
+import java.nio.ByteBuffer;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -23,9 +21,14 @@ public class Main {
         ConnectionData connectionData = createConnectionData(args);
 
         try (DatagramSocket serverSocket = createConnection(connectionData)) {
-            sendRequest(serverSocket, connectionData);
-            retriveFile(serverSocket, connectionData.getFilename());
-
+            boolean fileReceived = false;
+            while(!fileReceived) {
+                try {
+                    sendRequest(serverSocket, connectionData);
+                    retriveFile(serverSocket, connectionData.getFilename());
+                    fileReceived = true;
+                }catch (SocketTimeoutException ignored){}
+            }
         } catch (SocketException se) {
             System.out.println("could not connect to server, please try again!");
         } catch (IOException e) {
@@ -35,8 +38,9 @@ public class Main {
 
     private void sendRequest(DatagramSocket socket, ConnectionData connectionData) throws IOException {
         System.out.println("Sending request to server");
+        SaxTPRequest request = new SaxTPRequest(connectionData.getFilename());
 
-        byte[] buf = new SaxTPRequest(connectionData.getFilename()).getBytes();
+        byte[] buf = request.getBytes();
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.send(packet);
     }
@@ -45,14 +49,20 @@ public class Main {
         System.out.println("Retrieving file from server");
         ArrayList<SaxTPResponseData> responses = new ArrayList<>();
         byte[] response;
-        do{
+        do {
+            if(responses.isEmpty()){
+                socket.setSoTimeout(2500);
+            }else {
+                socket.setSoTimeout(0);
+            }
             response = receiveMessage(socket);
             SaxTPResponseData responseData = new SaxTPResponseData(response);
             System.out.println(Arrays.toString(response));
-            responses.add(responseData);
+            if(responses.isEmpty() || responseData.getSequenceId() != responses.get(responses.size()-1).getSequenceId()) {
+                responses.add(responseData);
+            }
             sendReponseAck(socket, responseData.getTransferId(), responseData.getSequenceId());
-
-        }while (response.length == 500);
+        } while (response.length == 500);
         buildFile(responses, filename);
     }
 
@@ -73,23 +83,24 @@ public class Main {
 
     private void buildFile(ArrayList<SaxTPResponseData> responses, String filename) throws IOException {
         int length = 0;
-        for(SaxTPResponseData data: responses){
+        for (SaxTPResponseData data : responses) {
             length += data.getData().length;
         }
 
         byte[] bytes = new byte[length];
-        int position = 0;
-        for(SaxTPResponseData data: responses){
-            byte[] dataBytes = data.getData();
-            int dataLength = dataBytes.length;
-            System.arraycopy(dataBytes, 0, bytes,position, dataLength);
-            position += dataLength;
+
+        ByteBuffer target = ByteBuffer.wrap(bytes);
+        for (SaxTPResponseData data: responses){
+            target.put(data.getData());
         }
 
-        try(FileOutputStream fos = new FileOutputStream(filename)){
+        try (FileOutputStream fos = new FileOutputStream(filename)) {
             fos.write(bytes);
         }
+
     }
+
+
     /**
      * Creates a byte array with the following setup
      * ‘SaxTP’ uint8​(0) uint32​(transferId) byte[...]​(filename)
@@ -118,6 +129,7 @@ public class Main {
 
     /**
      * Creates a connection to the server
+     *
      * @param connectionData a connectionData object containing the data for the connection
      * @return the DatagramSocket containing the connection to the server
      * @throws SocketException when the connecting goes wrong

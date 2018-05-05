@@ -26,6 +26,7 @@ public class SaxTPResponseData extends SaxTPMessage {
     }
 
     @Override
+    @Deprecated
     public byte[] getBytes() {
         byte[] message = super.getBytes();
         byte[] buf = new byte[message.length + sequenceId.length + data.length];
