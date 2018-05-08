@@ -62,26 +62,32 @@ public class Main {
                 socket.setSoTimeout(0);
             }
             response = receiveMessage(socket);
+            if (response[5] != -128) {
+                System.out.println(response[5]);
+                System.out.println("-128");
+                continue;
+            }
             SaxTPResponseData responseData = new SaxTPResponseData(response);
 //            System.out.println(Arrays.toString(response));
+            //TODO:check if the packet actually has the next sequence id
+
             if (responses.isEmpty() || responseData.getSequenceId() != responses.get(responses.size() - 1).getSequenceId()) {
                 responses.add(responseData);
             }
             sendResponseAck(socket, responseData.getTransferId(), responseData.getSequenceId());
-        } while (response.length == 500);
+
+        } while (response.length == 514);
         buildFile(responses, filename);
     }
 
     private byte[] receiveMessage(DatagramSocket socket) throws IOException {
-        byte[] buf = new byte[500];
+        byte[] buf = new byte[514];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.receive(packet);
         byte[] response = new byte[packet.getLength()];
         System.arraycopy(packet.getData(), 0, response, 0, response.length);
-        counter += response.length - 14;
         return response;
     }
-
 
     private void sendResponseAck(DatagramSocket socket, byte[] transferId, byte[] sequenceId) throws IOException {
         byte[] buf = new SaxTPResponseAck(transferId, sequenceId).getBytes();
@@ -93,7 +99,7 @@ public class Main {
      * Uses list of responses to build the final file
      *
      * @param responses list of SaxTPResponseData to merge into one file
-     * @param filename the name of the file
+     * @param filename  the name of the file
      * @throws IOException when the creating of the file goes wrong
      */
     private void buildFile(ArrayList<SaxTPResponseData> responses, String filename) throws IOException {
