@@ -23,3 +23,12 @@ When running the program you have to specify a hostname and a file, this can be 
 2. When you don't specify the variables like method 1 you will be asked when it needs them.
 
 When the program has the 2 needed variables it will download the files automatically in the current folder
+
+# Developer specific information
+* The source code is located in the src folder, this includes the unit tests.
+* To run the project the Main.java is used, located at \src\main\java
+* There are no extra libraries needed to run and develop the project.
+* When running the project as developer the downloaded files will get downloaded to the root of the project.
+
+# Known Issues:
+1. For some reason when a file consits of multiple packets an Unexpected end of archive error will appear when opening the file.
