@@ -70,13 +70,15 @@ public class Main {
             SaxTPResponseData responseData = new SaxTPResponseData(response);
 //            System.out.println(Arrays.toString(response));
             //TODO:check if the packet actually has the next sequence id
-
-            if (responses.isEmpty() || responseData.getSequenceId() != responses.get(responses.size() - 1).getSequenceId()) {
+            if (responses.isEmpty() || responses.get(responses.size()-1).isNext(responseData)) {
                 responses.add(responseData);
             }
             sendResponseAck(socket, responseData.getTransferId(), responseData.getSequenceId());
-
+            System.out.println(Arrays.toString(responseData.getSequenceId()));
         } while (response.length == 514);
+        for(SaxTPResponseData responseData: responses){
+            System.out.println(Arrays.toString(responseData.getSequenceId()));
+        }
         buildFile(responses, filename);
     }
 
@@ -94,6 +96,15 @@ public class Main {
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.send(packet);
     }
+
+    private int countSequenceNumber(byte[] sequenceId){
+        int total = 0;
+        for (byte number: sequenceId){
+            total += (int) number;
+        }
+        return total;
+    }
+
 
     /**
      * Uses list of responses to build the final file
