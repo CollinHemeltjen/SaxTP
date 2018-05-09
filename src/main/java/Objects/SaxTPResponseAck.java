@@ -1,17 +1,19 @@
 package Objects;
 
+import java.util.Arrays;
+
 public class SaxTPResponseAck extends SaxTPMessage {
 
   private byte[] sequenceId;
 
   public SaxTPResponseAck(byte[] transferId, byte[] sequenceId) {
     super(new byte[]{1}, transferId);
-    this.sequenceId = sequenceId;
+    this.sequenceId = Arrays.copyOf(sequenceId, sequenceId.length);
   }
 
   public SaxTPResponseAck(byte[] sequenceId) {
     super(new byte[]{1});
-    this.sequenceId = sequenceId;
+    this.sequenceId = Arrays.copyOf(sequenceId, sequenceId.length);
   }
 
 

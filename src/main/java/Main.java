@@ -2,21 +2,18 @@ import Objects.ConnectionData;
 import Objects.SaxTPRequest;
 import Objects.SaxTPResponseAck;
 import Objects.SaxTPResponseData;
-
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Scanner;
-import java.util.Random;
 
 public class Main {
 
@@ -30,34 +27,26 @@ public class Main {
     ArrayList<Integer> lostPackets;
 
     try {
-      boolean fileReceived = false;
-      while (!fileReceived) {
+      System.out.println("Creating connection with " + connectionData.getHostname());
+      while (true) {
         try (DatagramSocket serverSocket = createConnection(connectionData)) {
           sendRequest(serverSocket, connectionData);
 
+          System.out.println(
+              "Retrieving file, this may take a while depending on the file you are trying to retrieve");
           responses = receiveResponses(serverSocket, responses);
           lostPackets = findLostPackets(responses);
 
           if (!lostPackets.isEmpty()) {
-            System.out.println("Lost packets: " + lostPackets);
+            System.out.println("We lost some bits of data while downloading, we are trying again");
             continue;
           }
-//          while (!lostPackets.isEmpty()) {
-//            System.out.println("Lost packets: " + lostPackets);
-//            DatagramSocket newServerSocket = createConnection(connectionData);
-//            sendRequest(newServerSocket, connectionData);
-//            responses = combineResponses(responses, receiveResponses(newServerSocket), lostPackets);
-//            lostPackets = findLostPackets(responses);
-//          }
 
-          System.out.println("responses:");
-          for (SaxTPResponseData responseData : responses.values()) {
-            System.out.println(Arrays.toString(responseData.getSequenceId()));
-          }
-
+          System.out.println("Building file");
           buildFile(responses, connectionData.getFilename());
-          fileReceived = true;
-          System.out.println("done!");
+
+          System.out.println("File build");
+          break;
         } catch (SocketTimeoutException ste) {
           System.out.println("Server timed out, trying again");
         }
@@ -67,6 +56,8 @@ public class Main {
     } catch (IOException e) {
       e.printStackTrace();
     }
+    System.out.println("done!");
+
   }
 
   private void sendRequest(final DatagramSocket socket, final ConnectionData connectionData)
@@ -90,32 +81,23 @@ public class Main {
     return lostIndexes;
   }
 
-  private HashMap<BigInteger, SaxTPResponseData> combineResponses(
-      final HashMap<BigInteger, SaxTPResponseData> originalList,
-      final HashMap<BigInteger, SaxTPResponseData> extraList,
-      final ArrayList<Integer> lostIndexes) {
-    for (Integer lostIndex : lostIndexes) {
-
-      originalList.put(BigInteger.valueOf(lostIndex), extraList.get(BigInteger.valueOf(lostIndex)));
-    }
-    return originalList;
-  }
+  private static final int TOTAL_MESSAGE_SIZE = 514;
+  private static final int PACKET_TYPE_POSITION = 5;
+  private static final int RESPONSE_PACK_TYPE_NUMBER = -128;
+  private static final int TIMEOUT_DURATION = 2500;
 
   private HashMap<BigInteger, SaxTPResponseData> receiveResponses(final DatagramSocket socket,
       final HashMap<BigInteger, SaxTPResponseData> responses)
       throws IOException {
 
     byte[] response = null;
+    socket.setSoTimeout(TIMEOUT_DURATION);
     do {
-      if (response == null) {
-        socket.setSoTimeout(2500);
-      } else {
+      if (response != null) {
         socket.setSoTimeout(0);
       }
       response = receiveMessage(socket);
-      if (response[5] != -128) {
-        System.out.println(response[5]);
-        System.out.println("-128");
+      if (response[PACKET_TYPE_POSITION] != RESPONSE_PACK_TYPE_NUMBER) {
         continue;
       }
       SaxTPResponseData responseData = new SaxTPResponseData(response);
@@ -124,14 +106,13 @@ public class Main {
       responses.put(index, responseData);
 
       sendResponseAck(socket, responseData.getTransferId(), responseData.getSequenceId());
-      System.out.println(Arrays.toString(responseData.getSequenceId()));
-    } while (response.length == 514);
+    } while (response.length == TOTAL_MESSAGE_SIZE);
 
     return responses;
   }
 
-  private byte[] receiveMessage(DatagramSocket socket) throws IOException {
-    byte[] buf = new byte[514];
+  private byte[] receiveMessage(final DatagramSocket socket) throws IOException {
+    byte[] buf = new byte[TOTAL_MESSAGE_SIZE];
     DatagramPacket packet = new DatagramPacket(buf, buf.length);
     socket.receive(packet);
     byte[] response = new byte[packet.getLength()];
@@ -139,6 +120,14 @@ public class Main {
     return response;
   }
 
+  /**
+   * Creates and sends a new response ack
+   *
+   * @param socket to send response to
+   * @param transferId transfer to reply to
+   * @param sequenceId packet to acknowledge
+   * @throws IOException when sending goes wrong
+   */
   private void sendResponseAck(final DatagramSocket socket, final byte[] transferId,
       final byte[] sequenceId) throws IOException {
     byte[] buf = new SaxTPResponseAck(transferId, sequenceId).getBytes();
@@ -146,17 +135,11 @@ public class Main {
     socket.send(packet);
   }
 
-  private int countSequenceNumber(final byte[] sequenceId) {
-    int total = 0;
-    for (byte number : sequenceId) {
-      total += (int) number;
-    }
-    return total;
-  }
-
 
   /**
    * Uses list of responses to build the final file.
+   *
+   * File is saved in the current folder
    *
    * @param responses list of SaxTPResponseData to merge into one file
    * @param filename the name of the file
@@ -164,7 +147,6 @@ public class Main {
    */
   private void buildFile(final HashMap<BigInteger, SaxTPResponseData> responses,
       final String filename) throws IOException {
-    System.out.println("Building file");
     int length = 0;
     for (SaxTPResponseData data : responses.values()) {
       length += data.getData().length;
@@ -179,60 +161,27 @@ public class Main {
 
     try (FileOutputStream fos = new FileOutputStream(filename)) {
       fos.write(bytes);
-      System.out.println("File build");
-
     }
-  }
-
-
-  /**
-   * Creates a byte array with the following setup. ‘SaxTP’ uint8​(0) uint32​(transferId)
-   * byte[...]​(filename)
-   *
-   * @param filename the filename to request from the server
-   * @return the byte array
-   */
-  @Deprecated
-  byte[] createRequestMessage(final String filename) {
-    byte[] protocolMarker = "SaxTP".getBytes();
-    byte[] packetType = new byte[]{0};
-
-    byte[] transferIdentifier = new byte[4];
-    new Random().nextBytes(transferIdentifier);
-
-    byte[] file = filename.getBytes();
-    byte[] buf = new byte[protocolMarker.length + packetType.length + transferIdentifier.length
-        + file.length];
-
-    System.arraycopy(protocolMarker, 0, buf, 0, protocolMarker.length);
-    System.arraycopy(packetType, 0, buf, protocolMarker.length, packetType.length);
-    System.arraycopy(transferIdentifier, 0, buf, protocolMarker.length + packetType.length,
-        transferIdentifier.length);
-    System.arraycopy(file, 0, buf,
-        transferIdentifier.length + packetType.length + protocolMarker.length, file.length);
-
-    return buf;
   }
 
   /**
    * Creates a connection to the server.
    *
-   * @param connectionData a connectionData object containing the data for the connection
+   * @param connectionData contains the data for the connection
    * @return the DatagramSocket containing the connection to the server
    * @throws SocketException when the connecting goes wrong
    */
   private DatagramSocket createConnection(final ConnectionData connectionData)
       throws SocketException {
-    System.out.println("Creating connection with " + connectionData.getHostname());
-    InetSocketAddress address = new InetSocketAddress(connectionData.getHostname(),
-        ConnectionData.PORT);
+    InetSocketAddress address = new InetSocketAddress(
+        connectionData.getHostname(), ConnectionData.PORT);
     DatagramSocket socketServer = new DatagramSocket();
     socketServer.connect(address);
     return socketServer;
   }
 
   /**
-   * Checks the program arguments on input data asks the user if it cannot find them.
+   * Checks the program arguments on input data, asks the user if non exist.
    *
    * @param args the program arguments
    * @return a connection data object
@@ -243,7 +192,7 @@ public class Main {
 
     if (args.length < 2) {
       //no(t enough) input data)
-      Scanner scanner = new Scanner(System.in);
+      Scanner scanner = new Scanner(System.in, "UTF-8");
 
       System.out.println("please specify a hostname");
       hostname = scanner.nextLine();

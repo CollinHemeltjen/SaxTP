@@ -1,5 +1,5 @@
 # SaxTP
-A commandline based clientent for a simple file retrieval protocol ontop of UDP / IP.
+A commandline based client for a simple file retrieval protocol on top of UDP / IP.
 
 # Installation
 ## User
@@ -11,7 +11,7 @@ A commandline based clientent for a simple file retrieval protocol ontop of UDP 
 5. Use "java -jar SaxTP.jar" to run the executable.
 
 ## Developer
-1. Make sure you hava java installed.
+1. Make sure you have java installed.
 2. Make sure you have a capable IDE.
 3. Download the complete project.
 4. Run the program by running the Main.class
@@ -31,4 +31,4 @@ When the program has the 2 needed variables it will download the files automatic
 * When running the project as developer the downloaded files will get downloaded to the root of the project.
 
 # Known Issues:
-1. For some reason when a file consits of multiple packets an Unexpected end of archive error will appear when opening the file.
+1. For some reason when a file consists of multiple packets an Unexpected end of archive error will appear when opening the file.

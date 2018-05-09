@@ -1,5 +1,7 @@
 package Objects;
 
+import java.nio.charset.Charset;
+
 public class SaxTPRequest extends SaxTPMessage {
 
   private String filename;
@@ -11,7 +13,7 @@ public class SaxTPRequest extends SaxTPMessage {
 
   @Override
   public byte[] getBytes() {
-    byte[] filenameBytes = filename.getBytes();
+    byte[] filenameBytes = filename.getBytes(Charset.forName("UTF-8"));
     byte[] message = super.getBytes();
     byte[] buf = new byte[message.length + filenameBytes.length];
 

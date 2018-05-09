@@ -1,20 +1,24 @@
 package Objects;
 
+import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Random;
 
 public abstract class SaxTPMessage {
 
-  private static final byte[] protocolMarker = "SaxTP".getBytes();
+  public static final String PROTOCOL_MARKER_TEXT = "SaxTP";
+  private static final byte[] protocolMarker = PROTOCOL_MARKER_TEXT
+      .getBytes(Charset.forName("UTF-8"));
   private byte[] packetType;
   private byte[] transferId;
 
   public SaxTPMessage(byte[] packetType, byte[] transferId) {
-    this.packetType = packetType;
-    this.transferId = transferId;
+    this.packetType = Arrays.copyOf(packetType, packetType.length);
+    this.transferId = Arrays.copyOf(transferId, transferId.length);
   }
 
   public SaxTPMessage(byte[] packetType) {
-    this.packetType = packetType;
+    this.packetType = Arrays.copyOf(packetType, packetType.length);
     transferId = new byte[4];
     new Random().nextBytes(transferId);
   }
@@ -29,14 +33,14 @@ public abstract class SaxTPMessage {
   }
 
   public static byte[] getProtocolMarker() {
-    return protocolMarker;
+    return Arrays.copyOf(protocolMarker, protocolMarker.length);
   }
 
   public byte[] getPacketType() {
-    return packetType;
+    return Arrays.copyOf(packetType, packetType.length);
   }
 
   public byte[] getTransferId() {
-    return transferId;
+    return Arrays.copyOf(transferId, transferId.length);
   }
 }

@@ -12,14 +12,14 @@ public class SaxTPResponseData extends SaxTPMessage {
 
   public SaxTPResponseData(byte[] transferId, byte[] sequenceId, byte[] data) {
     super(new byte[]{-128}, transferId);
-    this.sequenceId = sequenceId;
-    this.data = data;
+    this.sequenceId = Arrays.copyOf(sequenceId, sequenceId.length);
+    this.data = Arrays.copyOf(data, data.length);
   }
 
   public SaxTPResponseData(byte[] sequenceId, byte[] data) {
     super(new byte[]{-128});
-    this.sequenceId = sequenceId;
-    this.data = data;
+    this.sequenceId = Arrays.copyOf(sequenceId, sequenceId.length);
+    this.data = Arrays.copyOf(data, data.length);
   }
 
   public SaxTPResponseData(byte[] response) {
@@ -41,11 +41,11 @@ public class SaxTPResponseData extends SaxTPMessage {
   }
 
   public byte[] getData() {
-    return data;
+    return Arrays.copyOf(data, data.length);
   }
 
   public byte[] getSequenceId() {
-    return sequenceId;
+    return Arrays.copyOf(sequenceId, sequenceId.length);
   }
 
   public boolean isNext(SaxTPResponseData o) {
