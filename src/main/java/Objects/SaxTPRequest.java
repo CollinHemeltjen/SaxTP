@@ -1,21 +1,22 @@
 package Objects;
 
 public class SaxTPRequest extends SaxTPMessage {
-    private String filename;
 
-    public SaxTPRequest(String filename) {
-        super(new byte[]{0});
-        this.filename = filename;
-    }
+  private String filename;
 
-    @Override
-    public byte[] getBytes() {
-        byte[] filenameBytes = filename.getBytes();
-        byte[] message = super.getBytes();
-        byte[] buf = new byte[message.length + filenameBytes.length];
+  public SaxTPRequest(String filename) {
+    super(new byte[]{0});
+    this.filename = filename;
+  }
 
-        System.arraycopy(message, 0, buf, 0, message.length);
-        System.arraycopy(filenameBytes, 0, buf, message.length, filenameBytes.length);
-        return buf;
-    }
+  @Override
+  public byte[] getBytes() {
+    byte[] filenameBytes = filename.getBytes();
+    byte[] message = super.getBytes();
+    byte[] buf = new byte[message.length + filenameBytes.length];
+
+    System.arraycopy(message, 0, buf, 0, message.length);
+    System.arraycopy(filenameBytes, 0, buf, message.length, filenameBytes.length);
+    return buf;
+  }
 }
