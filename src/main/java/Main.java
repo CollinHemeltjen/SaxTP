@@ -3,15 +3,12 @@ import Objects.SaxTPRequest;
 import Objects.SaxTPResponseAck;
 import Objects.SaxTPResponseData;
 
-import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Random;
-import java.util.Scanner;
+import java.util.*;
 
 public class Main {
     public static int counter = 0;
@@ -22,13 +19,29 @@ public class Main {
 
     private void run(String[] args) {
         ConnectionData connectionData = createConnectionData(args);
+        HashMap<BigInteger,SaxTPResponseData> responses;
+        ArrayList<Integer> lostPackets;
 
         try (DatagramSocket serverSocket = createConnection(connectionData)) {
             boolean fileReceived = false;
             while (!fileReceived) {
                 try {
                     sendRequest(serverSocket, connectionData);
-                    retrieveFile(serverSocket, connectionData.getFilename());
+
+                    responses = receiveResponses(serverSocket);
+                    lostPackets = findLostPackets(responses);
+
+                    while(!lostPackets.isEmpty()){
+                        System.out.println(lostPackets);
+                        DatagramSocket newServerSocket = createConnection(connectionData);
+                        sendRequest(newServerSocket, connectionData);
+                        responses = combineResponses(responses, receiveResponses(newServerSocket), lostPackets);
+                        lostPackets = findLostPackets(responses);
+                    }
+                    for (SaxTPResponseData responseData : responses.values()) {
+                        System.out.println(Arrays.toString(responseData.getSequenceId()));
+                    }
+                    buildFile(responses, connectionData.getFilename());
                     fileReceived = true;
                     System.out.println("done!");
                 } catch (SocketTimeoutException ste) {
@@ -53,7 +66,45 @@ public class Main {
 
     private void retrieveFile(DatagramSocket socket, String filename) throws IOException {
         System.out.println("Retrieving file from server");
-        ArrayList<SaxTPResponseData> responses = new ArrayList<>();
+        HashMap<BigInteger,SaxTPResponseData> responses = receiveResponses(socket);
+        ArrayList<Integer> lostPackets = findLostPackets(responses);
+
+        while(!lostPackets.isEmpty()){
+            System.out.println(lostPackets);
+            responses = combineResponses(responses, receiveResponses(socket), lostPackets);
+            lostPackets = findLostPackets(responses);
+        }
+
+        for (SaxTPResponseData responseData : responses.values()) {
+            System.out.println(Arrays.toString(responseData.getSequenceId()));
+        }
+        buildFile(responses, filename);
+    }
+
+    private BigInteger sequenceIdToIndex(byte[] sequenceID) {
+        return new BigInteger(sequenceID);
+    }
+
+    private ArrayList<Integer> findLostPackets(HashMap<BigInteger,SaxTPResponseData> responses) {
+        ArrayList<Integer> lostIndexes = new ArrayList<>();
+        for (int i = 0; i < responses.size(); i++) {
+            if (!responses.containsKey(BigInteger.valueOf(i)) ) {
+                lostIndexes.add(i);
+            }
+        }
+        return lostIndexes;
+    }
+
+    private HashMap<BigInteger,SaxTPResponseData> combineResponses(HashMap<BigInteger,SaxTPResponseData> originalList, HashMap<BigInteger,SaxTPResponseData> extraList, ArrayList<Integer> lostIndexes) {
+        for (Integer lostIndex : lostIndexes) {
+
+            originalList.put(BigInteger.valueOf(lostIndex), extraList.get(BigInteger.valueOf(lostIndex)));
+        }
+        return originalList;
+    }
+
+    private HashMap<BigInteger, SaxTPResponseData> receiveResponses(DatagramSocket socket) throws IOException {
+        HashMap<BigInteger,SaxTPResponseData> responses = new HashMap<>();
         byte[] response;
         do {
             if (responses.isEmpty()) {
@@ -68,18 +119,17 @@ public class Main {
                 continue;
             }
             SaxTPResponseData responseData = new SaxTPResponseData(response);
-//            System.out.println(Arrays.toString(response));
-            //TODO:check if the packet actually has the next sequence id
-            if (responses.isEmpty() || responses.get(responses.size()-1).isNext(responseData)) {
-                responses.add(responseData);
-            }
+
+            BigInteger index = new BigInteger(responseData.getSequenceId());
+            responses.put(index, responseData);
+
+
+
             sendResponseAck(socket, responseData.getTransferId(), responseData.getSequenceId());
             System.out.println(Arrays.toString(responseData.getSequenceId()));
         } while (response.length == 514);
-        for(SaxTPResponseData responseData: responses){
-            System.out.println(Arrays.toString(responseData.getSequenceId()));
-        }
-        buildFile(responses, filename);
+
+        return responses;
     }
 
     private byte[] receiveMessage(DatagramSocket socket) throws IOException {
@@ -97,9 +147,9 @@ public class Main {
         socket.send(packet);
     }
 
-    private int countSequenceNumber(byte[] sequenceId){
+    private int countSequenceNumber(byte[] sequenceId) {
         int total = 0;
-        for (byte number: sequenceId){
+        for (byte number : sequenceId) {
             total += (int) number;
         }
         return total;
@@ -113,17 +163,17 @@ public class Main {
      * @param filename  the name of the file
      * @throws IOException when the creating of the file goes wrong
      */
-    private void buildFile(ArrayList<SaxTPResponseData> responses, String filename) throws IOException {
+    private void buildFile(HashMap<BigInteger,SaxTPResponseData> responses, String filename) throws IOException {
         System.out.println("Building file");
         int length = 0;
-        for (SaxTPResponseData data : responses) {
+        for (SaxTPResponseData data : responses.values()) {
             length += data.getData().length;
         }
 
         byte[] bytes = new byte[length];
 
         ByteBuffer target = ByteBuffer.wrap(bytes);
-        for (SaxTPResponseData data : responses) {
+        for (SaxTPResponseData data : responses.values()) {
             target.put(data.getData());
         }
 

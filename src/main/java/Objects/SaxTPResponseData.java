@@ -53,17 +53,6 @@ public class SaxTPResponseData extends SaxTPMessage {
         return Objects.equals(thisSequenceID.add(BigInteger.valueOf(1)), otherSequenceID);
     }
 
-//    public int bytearray2number(byte[] barray)
-//    {
-//        int number =0;
-//        int counter = 0;
-//        System.out.println(Arrays.toString(barray));
-//        new BigInteger(barray);
-//        for (int i = barray.length-1; i >= 0; i--) {
-//            number += (barray[i] & 0xff) + (counter * 255);
-//            counter++;
-//        }
-//        return number;
-//    }
+
 
 }
