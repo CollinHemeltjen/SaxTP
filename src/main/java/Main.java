@@ -21,6 +21,11 @@ public class Main {
     new Main().run(args);
   }
 
+  /**
+   * The main running loop of the program.
+   *
+   * @param args the program variables (hostname,filename)
+   */
   private void run(final String[] args) {
     ConnectionData connectionData = createConnectionData(args);
     HashMap<BigInteger, SaxTPResponseData> responses = new HashMap<>();
@@ -60,6 +65,13 @@ public class Main {
 
   }
 
+  /**
+   * Sends a Request to the server.
+   *
+   * @param socket the socket to send to
+   * @param connectionData the connection data for the server
+   * @throws IOException when output goes wrong
+   */
   private void sendRequest(final DatagramSocket socket, final ConnectionData connectionData)
       throws IOException {
     System.out.println("Sending request to server");
@@ -70,6 +82,12 @@ public class Main {
     socket.send(packet);
   }
 
+  /**
+   * Searches the HashMap to check if any packets are missing.
+   *
+   * @param responses a HashMap with responses to check
+   * @return a list of packets missing
+   */
   private ArrayList<Integer> findLostPackets(
       final HashMap<BigInteger, SaxTPResponseData> responses) {
     ArrayList<Integer> lostIndexes = new ArrayList<>();
@@ -86,7 +104,17 @@ public class Main {
   private static final int RESPONSE_PACK_TYPE_NUMBER = -128;
   private static final int TIMEOUT_DURATION = 2500;
 
-  private HashMap<BigInteger, SaxTPResponseData> receiveResponses(final DatagramSocket socket,
+  /**
+   * Uses receiveMessage and sendResponseAck to perform a packet exchange.
+   *
+   * @param socket the socket to listen and send on
+   * @param responses a HashMap with previous results to merge the two maps. If this is the first
+   * time, the map can be empty
+   * @return a HashMap of retrieved responses
+   * @throws IOException when the retrieval goes wrong
+   */
+  private HashMap<BigInteger, SaxTPResponseData> receiveResponses(
+      final DatagramSocket socket,
       final HashMap<BigInteger, SaxTPResponseData> responses)
       throws IOException {
 
@@ -105,13 +133,22 @@ public class Main {
       BigInteger index = new BigInteger(responseData.getSequenceId());
       responses.put(index, responseData);
 
-      sendResponseAck(socket, responseData.getTransferId(), responseData.getSequenceId());
+      sendResponseAck(socket, responseData.getTransferId(),
+          responseData.getSequenceId());
     } while (response.length == TOTAL_MESSAGE_SIZE);
 
     return responses;
   }
 
-  private byte[] receiveMessage(final DatagramSocket socket) throws IOException {
+  /**
+   * Waits for a new message from the server.
+   *
+   * @param socket the socket to listen on
+   * @return a byte[] containing the message
+   * @throws IOException when it sees a faulty input
+   */
+  private byte[] receiveMessage(
+      final DatagramSocket socket) throws IOException {
     byte[] buf = new byte[TOTAL_MESSAGE_SIZE];
     DatagramPacket packet = new DatagramPacket(buf, buf.length);
     socket.receive(packet);
@@ -121,15 +158,15 @@ public class Main {
   }
 
   /**
-   * Creates and sends a new response ack
+   * Creates and sends a new response ack.
    *
    * @param socket to send response to
    * @param transferId transfer to reply to
    * @param sequenceId packet to acknowledge
    * @throws IOException when sending goes wrong
    */
-  private void sendResponseAck(final DatagramSocket socket, final byte[] transferId,
-      final byte[] sequenceId) throws IOException {
+  private void sendResponseAck(final DatagramSocket socket,
+      final byte[] transferId, final byte[] sequenceId) throws IOException {
     byte[] buf = new SaxTPResponseAck(transferId, sequenceId).getBytes();
     DatagramPacket packet = new DatagramPacket(buf, buf.length);
     socket.send(packet);
