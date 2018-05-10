@@ -40,7 +40,8 @@ public class Main {
           sendRequest(serverSocket, connectionData);
 
           System.out.println(
-              "Retrieving file, this may take a while depending on the file you are trying to retrieve");
+              "Retrieving file, this may take a while "
+                  + "depending on the file you are trying to retrieve");
           responses = receiveResponses(serverSocket, responses);
           lostPackets = findLostPackets(responses);
 
@@ -106,7 +107,7 @@ public class Main {
    *
    * @param socket the socket to listen and send on
    * @param responses a HashMap with previous results to merge the two maps. If this is the first
-   * time, the map can be empty
+   *     time, the map can be empty
    * @return a HashMap of retrieved responses
    * @throws IOException when the retrieval goes wrong
    */
@@ -193,7 +194,7 @@ public class Main {
 
   /**
    * Uses list of responses to build the final file.
-   *
+   * <p/>
    * File is saved in the current folder
    *
    * @param responses list of SaxTPResponseData to merge into one file
