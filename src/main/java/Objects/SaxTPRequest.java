@@ -6,7 +6,7 @@ public class SaxTPRequest extends SaxTPMessage {
 
   private String filename;
 
-  public SaxTPRequest(String filename) {
+  public SaxTPRequest(final String filename) {
     super(new byte[]{0});
     this.filename = filename;
   }

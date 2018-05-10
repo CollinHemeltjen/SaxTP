@@ -1,3 +1,5 @@
+import static Objects.SaxTPResponseData.RESPONSE_PACK_TYPE_NUMBER;
+
 import Objects.ConnectionData;
 import Objects.SaxTPRequest;
 import Objects.SaxTPResponseAck;
@@ -65,6 +67,23 @@ public class Main {
 
   }
 
+
+  /**
+   * Creates a connection to the server.
+   *
+   * @param connectionData contains the data for the connection
+   * @return the DatagramSocket containing the connection to the server
+   * @throws SocketException when the connecting goes wrong
+   */
+  private DatagramSocket createConnection(final ConnectionData connectionData)
+      throws SocketException {
+    InetSocketAddress address = new InetSocketAddress(
+        connectionData.getHostname(), ConnectionData.PORT);
+    DatagramSocket socketServer = new DatagramSocket();
+    socketServer.connect(address);
+    return socketServer;
+  }
+
   /**
    * Sends a Request to the server.
    *
@@ -81,28 +100,6 @@ public class Main {
     DatagramPacket packet = new DatagramPacket(buf, buf.length);
     socket.send(packet);
   }
-
-  /**
-   * Searches the HashMap to check if any packets are missing.
-   *
-   * @param responses a HashMap with responses to check
-   * @return a list of packets missing
-   */
-  private ArrayList<Integer> findLostPackets(
-      final HashMap<BigInteger, SaxTPResponseData> responses) {
-    ArrayList<Integer> lostIndexes = new ArrayList<>();
-    for (int i = 0; i < responses.size(); i++) {
-      if (!responses.containsKey(BigInteger.valueOf(i))) {
-        lostIndexes.add(i);
-      }
-    }
-    return lostIndexes;
-  }
-
-  private static final int TOTAL_MESSAGE_SIZE = 514;
-  private static final int PACKET_TYPE_POSITION = 5;
-  private static final int RESPONSE_PACK_TYPE_NUMBER = -128;
-  private static final int TIMEOUT_DURATION = 2500;
 
   /**
    * Uses receiveMessage and sendResponseAck to perform a packet exchange.
@@ -140,6 +137,11 @@ public class Main {
     return responses;
   }
 
+  private static final int TOTAL_MESSAGE_SIZE = 514;
+  private static final int PACKET_TYPE_POSITION = 5;
+  private static final int TIMEOUT_DURATION = 2500;
+
+
   /**
    * Waits for a new message from the server.
    *
@@ -172,6 +174,22 @@ public class Main {
     socket.send(packet);
   }
 
+  /**
+   * Searches the HashMap to check if any packets are missing.
+   *
+   * @param responses a HashMap with responses to check
+   * @return a list of packets missing
+   */
+  private ArrayList<Integer> findLostPackets(
+      final HashMap<BigInteger, SaxTPResponseData> responses) {
+    ArrayList<Integer> lostIndexes = new ArrayList<>();
+    for (int i = 0; i < responses.size(); i++) {
+      if (!responses.containsKey(BigInteger.valueOf(i))) {
+        lostIndexes.add(i);
+      }
+    }
+    return lostIndexes;
+  }
 
   /**
    * Uses list of responses to build the final file.
@@ -201,21 +219,6 @@ public class Main {
     }
   }
 
-  /**
-   * Creates a connection to the server.
-   *
-   * @param connectionData contains the data for the connection
-   * @return the DatagramSocket containing the connection to the server
-   * @throws SocketException when the connecting goes wrong
-   */
-  private DatagramSocket createConnection(final ConnectionData connectionData)
-      throws SocketException {
-    InetSocketAddress address = new InetSocketAddress(
-        connectionData.getHostname(), ConnectionData.PORT);
-    DatagramSocket socketServer = new DatagramSocket();
-    socketServer.connect(address);
-    return socketServer;
-  }
 
   /**
    * Checks the program arguments on input data, asks the user if non exist.

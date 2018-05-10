@@ -1,43 +1,24 @@
 package Objects;
 
-import java.math.BigInteger;
 import java.util.Arrays;
-import java.util.Objects;
 
 public class SaxTPResponseData extends SaxTPMessage {
+
+  public static final int RESPONSE_PACK_TYPE_NUMBER = -128;
+  public static final int TRANSFERID_POSITION_START = 6;
+  public static final int TRANSFERID_POSITION_END = 10;
+  public static final int SEQUENCEID_POSITION_START = 10;
+  public static final int SEQUENCEID_POSITION_END = 14;
+  public static final int DATA_POSITION_START = 14;
 
   private byte[] data;
   private byte[] sequenceId;
 
-
-  public SaxTPResponseData(byte[] transferId, byte[] sequenceId, byte[] data) {
-    super(new byte[]{-128}, transferId);
-    this.sequenceId = Arrays.copyOf(sequenceId, sequenceId.length);
-    this.data = Arrays.copyOf(data, data.length);
-  }
-
-  public SaxTPResponseData(byte[] sequenceId, byte[] data) {
-    super(new byte[]{-128});
-    this.sequenceId = Arrays.copyOf(sequenceId, sequenceId.length);
-    this.data = Arrays.copyOf(data, data.length);
-  }
-
-  public SaxTPResponseData(byte[] response) {
-    super(new byte[]{-128}, Arrays.copyOfRange(response, 6, 10));
-    sequenceId = Arrays.copyOfRange(response, 10, 14);
-    data = Arrays.copyOfRange(response, 14, response.length);
-  }
-
-  @Override
-  @Deprecated
-  public byte[] getBytes() {
-    byte[] message = super.getBytes();
-    byte[] buf = new byte[message.length + sequenceId.length + data.length];
-
-    System.arraycopy(message, 0, buf, 0, message.length);
-    System.arraycopy(sequenceId, 0, buf, message.length, sequenceId.length);
-    System.arraycopy(data, 0, buf, message.length + sequenceId.length, data.length);
-    return buf;
+  public SaxTPResponseData(final byte[] response) {
+    super(new byte[]{RESPONSE_PACK_TYPE_NUMBER}, Arrays.copyOfRange(
+        response, TRANSFERID_POSITION_START, TRANSFERID_POSITION_END));
+    sequenceId = Arrays.copyOfRange(response, SEQUENCEID_POSITION_START, SEQUENCEID_POSITION_END);
+    data = Arrays.copyOfRange(response, DATA_POSITION_START, response.length);
   }
 
   public byte[] getData() {
@@ -47,12 +28,5 @@ public class SaxTPResponseData extends SaxTPMessage {
   public byte[] getSequenceId() {
     return Arrays.copyOf(sequenceId, sequenceId.length);
   }
-
-  public boolean isNext(SaxTPResponseData o) {
-    BigInteger thisSequenceID = new BigInteger(sequenceId);
-    BigInteger otherSequenceID = new BigInteger(o.sequenceId);
-    return Objects.equals(thisSequenceID.add(BigInteger.valueOf(1)), otherSequenceID);
-  }
-
 
 }

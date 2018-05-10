@@ -6,7 +6,7 @@ public class ConnectionData {
   private String hostname;
   private String filename;
 
-  public ConnectionData(String hostname, String filename) {
+  public ConnectionData(final String hostname, final String filename) {
     this.hostname = hostname;
     this.filename = filename;
   }
