@@ -29,6 +29,3 @@ When the program has the 2 needed variables it will download the files automatic
 * To run the project the Main.java is used, located at \src\main\java
 * There are no extra libraries needed to run and develop the project.
 * When running the project as developer the downloaded files will get downloaded to the root of the project.
-
-# Known Issues:
-1. For some reason when a file consists of multiple packets an Unexpected end of archive error will appear when opening the file.
